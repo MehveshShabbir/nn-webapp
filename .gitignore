@@ -177,3 +177,6 @@ node_modules/
 # *.xml
 # data/
 Face_Emotion_Recognition*/
+
+# Python version file
+.python-version
