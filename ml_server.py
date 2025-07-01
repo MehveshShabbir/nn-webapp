@@ -11,12 +11,16 @@ CORS(app, origins=["*"])
 # Load model and create feature model
 try:
     model = tf.keras.models.load_model('model.h5')
+    print("✅ Model loaded successfully")
+    print("Model input details:")
+    print(model.inputs)
+    print(f"Expected input shape: {model.input_shape}")
+    model.summary()  # Print model architecture
+    
     feature_model = tf.keras.models.Model(
         model.inputs,
         [layer.output for layer in model.layers]
     )
-    print("✅ Model loaded successfully")
-    print(f"Model input shape: {model.input_shape}")
 except Exception as e:
     print(f"❌ Model loading error: {e}")
     model = None
@@ -33,30 +37,23 @@ except Exception as e:
 
 def get_prediction():
     try:
-        if x_test is None:
-            raise Exception("MNIST data not loaded")
-        if feature_model is None:
-            raise Exception("Model not loaded")
+        if x_test is None or feature_model is None:
+            raise Exception("Model or data not loaded properly")
             
-        # Get random image
         index = np.random.choice(x_test.shape[0])
         image = x_test[index]
         
-        # Reshape to model's expected input
-        if len(image.shape) == 2:  # (28, 28)
-            image_arr = image.reshape(1, 784)
+        # Reshape based on model's expected input
+        if len(model.input_shape) == 3:
+            # For CNN models expecting (batch, height, width)
+            image_arr = image.reshape((1,) + model.input_shape[1:])
         else:
-            image_arr = image.reshape(1, -1)  # fallback
+            # For dense models expecting (batch, features)
+            image_arr = image.reshape(1, -1)
             
         print(f"Input shape for prediction: {image_arr.shape}")
         
-        # Validate input shape matches model
-        if image_arr.shape[1] != 784:
-            raise ValueError(f"Input shape {image_arr.shape} doesn't match expected 784 features")
-        
-        # Get predictions from all layers
         preds = feature_model.predict(image_arr, verbose=0)
-        
         return preds, image
         
     except Exception as e:
@@ -69,25 +66,16 @@ def index():
         try:
             print("📨 POST request received")
             preds, image = get_prediction()
-            
-            # Convert to JSON-serializable format
-            final_preds = [p.tolist() for p in preds]
-            
             response_data = {
-                'prediction': final_preds,
+                'prediction': [p.tolist() for p in preds],
                 'image': image.tolist()
             }
-            
-            print("✅ Prediction generated successfully")
-            return jsonify(response_data)  # Using jsonify instead of json.dumps
-            
+            return jsonify(response_data)
         except Exception as e:
             print(f"❌ Error in POST handler: {e}")
             return jsonify({'error': str(e)}), 500
-    
     return 'Welcome To The Neural Network API!'
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    print(f"🚀 Starting server on port {port}")
     app.run(host='0.0.0.0', port=port, debug=False)
