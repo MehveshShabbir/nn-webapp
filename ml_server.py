@@ -1,40 +1,81 @@
 import json
 import tensorflow as tf
 import numpy as np
-import random
 import os
 from flask import Flask, request
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins=["*"])
 
-model = tf.keras.models.load_model('model.h5')
-feature_model = tf.keras.models.Model(
-    model.inputs,
-    [layer.output for layer in model.layers]
-)
+# Load model and create feature model
+try:
+    model = tf.keras.models.load_model('model.h5')
+    feature_model = tf.keras.models.Model(
+        model.inputs,
+        [layer.output for layer in model.layers]
+    )
+    print("✅ Model loaded successfully")
+except Exception as e:
+    print(f"❌ Model loading error: {e}")
+    model = None
+    feature_model = None
 
-_, (x_test, _) = tf.keras.datasets.mnist.load_data()
-x_test = x_test / 255.
+# Load test data
+try:
+    _, (x_test, _) = tf.keras.datasets.mnist.load_data()
+    x_test = x_test / 255.0
+    print("✅ MNIST data loaded successfully")
+except Exception as e:
+    print(f"❌ MNIST loading error: {e}")
+    x_test = None
 
 def get_prediction():
-    index = np.random.choice(x_test.shape[0])
-    image = x_test[index, :, :]
-    image_arr = np.reshape(image, (1, 784))
-    return feature_model.predict(image_arr), image
+    try:
+        if x_test is None or feature_model is None:
+            raise Exception("Model or data not loaded properly")
+            
+        # Get random image
+        index = np.random.choice(x_test.shape[0])
+        image = x_test[index, :, :]
+        
+        # Reshape for prediction
+        image_arr = np.reshape(image, (1, 784))
+        
+        # Get predictions from all layers
+        preds = feature_model.predict(image_arr, verbose=0)
+        
+        return preds, image
+        
+    except Exception as e:
+        print(f"❌ Prediction error: {e}")
+        raise e
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
-        preds, image = get_prediction()
-        final_preds = [p.tolist() for p in preds]
-        return json.dumps({
-            'prediction': final_preds,
-            'image': image.tolist()
-        })
+        try:
+            print("📨 POST request received")
+            preds, image = get_prediction()
+            
+            # Convert to JSON-serializable format
+            final_preds = [p.tolist() for p in preds]
+            
+            response_data = {
+                'prediction': final_preds,
+                'image': image.tolist()
+            }
+            
+            print("✅ Prediction generated successfully")
+            return json.dumps(response_data)
+            
+        except Exception as e:
+            print(f"❌ Error in POST handler: {e}")
+            return json.dumps({'error': str(e)}), 500
+    
     return 'Welcome To The Neural Network API!'
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    print(f"🚀 Starting server on port {port}")
+    app.run(host='0.0.0.0', port=port, debug=True)
