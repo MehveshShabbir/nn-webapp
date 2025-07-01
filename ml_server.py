@@ -16,6 +16,7 @@ try:
         [layer.output for layer in model.layers]
     )
     print("✅ Model loaded successfully")
+    print(f"Model input shape: {model.input_shape}")
 except Exception as e:
     print(f"❌ Model loading error: {e}")
     model = None
@@ -39,8 +40,18 @@ def get_prediction():
         index = np.random.choice(x_test.shape[0])
         image = x_test[index, :, :]
         
-        # Reshape for prediction
-        image_arr = np.reshape(image, (1, 784))
+        # Reshape based on model's expected input shape
+        if len(model.input_shape) == 2:  # (None, 784)
+            image_arr = np.reshape(image, (1, 784))
+        elif len(model.input_shape) == 3:  # (None, 28, 28) 
+            image_arr = np.reshape(image, (1, 28, 28))
+        elif len(model.input_shape) == 4:  # (None, 28, 28, 1)
+            image_arr = np.reshape(image, (1, 28, 28, 1))
+        else:
+            # Default to flattened
+            image_arr = np.reshape(image, (1, 784))
+        
+        print(f"Input shape for prediction: {image_arr.shape}")
         
         # Get predictions from all layers
         preds = feature_model.predict(image_arr, verbose=0)
