@@ -40,16 +40,8 @@ def get_prediction():
         index = np.random.choice(x_test.shape[0])
         image = x_test[index, :, :]
         
-        # Reshape based on model's expected input shape
-        if len(model.input_shape) == 2:  # (None, 784)
-            image_arr = np.reshape(image, (1, 784))
-        elif len(model.input_shape) == 3:  # (None, 28, 28) 
-            image_arr = np.reshape(image, (1, 28, 28))
-        elif len(model.input_shape) == 4:  # (None, 28, 28, 1)
-            image_arr = np.reshape(image, (1, 28, 28, 1))
-        else:
-            # Default to flattened
-            image_arr = np.reshape(image, (1, 784))
+        # ALWAYS FLATTEN TO 784 - Your model expects this!
+        image_arr = np.reshape(image, (1, 784))
         
         print(f"Input shape for prediction: {image_arr.shape}")
         
@@ -89,4 +81,4 @@ def index():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print(f"🚀 Starting server on port {port}")
-    app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(host='0.0.0.0', port=port, debug=False)  # Turn off debug for production
