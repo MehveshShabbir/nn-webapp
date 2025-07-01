@@ -161,7 +161,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-URI = 'http://127.0.0.1:5000'
+URI = 'https://nn-visaulizer-production.up.railway.app/'
 
 st.markdown('<div class="main-title">Neural Network Visualizer</div>', unsafe_allow_html=True)
 
