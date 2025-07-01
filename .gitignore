@@ -178,5 +178,5 @@ node_modules/
 # data/
 Face_Emotion_Recognition*/
 
-# Python version file
-.python-version
+# Jupyter notebooks (if you don't want to commit them)
+*.ipynb
