@@ -2,7 +2,7 @@ import json
 import tensorflow as tf
 import numpy as np
 import os
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -33,17 +33,26 @@ except Exception as e:
 
 def get_prediction():
     try:
-        if x_test is None or feature_model is None:
-            raise Exception("Model or data not loaded properly")
+        if x_test is None:
+            raise Exception("MNIST data not loaded")
+        if feature_model is None:
+            raise Exception("Model not loaded")
             
         # Get random image
         index = np.random.choice(x_test.shape[0])
-        image = x_test[index, :, :]
+        image = x_test[index]
         
-        # ALWAYS FLATTEN TO 784 - Your model expects this!
-        image_arr = np.reshape(image, (1, 784))
-        
+        # Reshape to model's expected input
+        if len(image.shape) == 2:  # (28, 28)
+            image_arr = image.reshape(1, 784)
+        else:
+            image_arr = image.reshape(1, -1)  # fallback
+            
         print(f"Input shape for prediction: {image_arr.shape}")
+        
+        # Validate input shape matches model
+        if image_arr.shape[1] != 784:
+            raise ValueError(f"Input shape {image_arr.shape} doesn't match expected 784 features")
         
         # Get predictions from all layers
         preds = feature_model.predict(image_arr, verbose=0)
@@ -70,15 +79,15 @@ def index():
             }
             
             print("✅ Prediction generated successfully")
-            return json.dumps(response_data)
+            return jsonify(response_data)  # Using jsonify instead of json.dumps
             
         except Exception as e:
             print(f"❌ Error in POST handler: {e}")
-            return json.dumps({'error': str(e)}), 500
+            return jsonify({'error': str(e)}), 500
     
     return 'Welcome To The Neural Network API!'
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print(f"🚀 Starting server on port {port}")
-    app.run(host='0.0.0.0', port=port, debug=False)  # Turn off debug for production
+    app.run(host='0.0.0.0', port=port, debug=False)
